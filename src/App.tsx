@@ -1,6 +1,7 @@
 import { LockKeyhole, ShieldCheck, WalletCards, ArrowRightLeft, Droplets, EyeOff } from 'lucide-react'
 import { Link, NavLink, Route, Routes } from 'react-router-dom'
 import WalletButton from './WalletButton'
+import { LiquidityPanel, SwapPanel } from './DexPages'
 
 const seismicDocs = 'https://docs.seismic.systems/'
 const githubUrl = 'https://github.com/benjoz76/shadow-dex'
@@ -50,10 +51,10 @@ function Home() {
         <div className="orb"></div>
         <div className="shadow-card preview-card">
           <div className="card-top"><div><div className="muted tiny">PRIVATE SWAP</div><h3>Swap</h3></div><span className="status"><ShieldCheck size={15}/> Shielded</span></div>
-          <TokenBox label="From" token="sUSDC" amount="0.0"/>
+          <TokenBox label="From" token="sUSD" amount="0.0"/>
           <div className="swap-glyph"><ArrowRightLeft size={18}/></div>
-          <TokenBox label="To" token="sETH" amount="0.0"/>
-          <div className="slippage"><span>Slippage</span><div><button>0.1%</button><button className="active-chip">0.5%</button><button>1%</button></div></div>
+          <TokenBox label="To" token="sETH" amount="Private"/>
+          <div className="detail-row"><span>Pool fee</span><strong>0% (MVP)</strong></div>
           <Link className="primary-btn wide" to="/swap">Swap Privately</Link>
         </div>
       </div>
@@ -73,15 +74,15 @@ function Home() {
 }
 
 function TokenBox({label, token, amount}: {label:string, token:string, amount:string}) {
-  return <div className="token-box"><div><span className="muted tiny">{label}</span><strong>{amount}</strong></div><button className="token-pill"><span className="coin"></span>{token}⌄</button></div>
+  return <div className="token-box"><div><span className="muted tiny">{label}</span><strong>{amount}</strong></div><span className="token-pill static-pill"><span className="coin"></span>{token}</span></div>
 }
 function Stat({title,value,note}:{title:string,value:string,note:string}){return <div className="stat"><span>{title}</span><strong>{value}</strong><small>{note}</small></div>}
 function Feature({icon,title,body}:{icon:React.ReactNode,title:string,body:string}){return <div className="feature"><div className="feature-icon">{icon}</div><h3>{title}</h3><p>{body}</p></div>}
 function PageIntro({kicker,title,body}:{kicker:string,title:string,body:string}) {return <div className="page-intro"><div className="eyebrow">{kicker}</div><h1>{title}</h1><p>{body}</p></div>}
 
-function SwapPage(){return <section className="page container"><PageIntro kicker="SHIELDED EXCHANGE" title="Swap" body="A focused private-swap workspace for Shadow-Dex."/><div className="center-card shadow-card app-card"><div className="card-top"><h2>Private Swap</h2><span className="status"><ShieldCheck size={15}/> Shielded</span></div><TokenBox label="From" token="sUSDC" amount="0.0"/><div className="swap-glyph"><ArrowRightLeft/></div><TokenBox label="To" token="sETH" amount="0.0"/><div className="detail-row"><span>Slippage tolerance</span><strong>0.5%</strong></div><div className="detail-row"><span>Route</span><strong>Direct pool</strong></div><WalletButton /></div></section>}
-function LiquidityPage(){return <section className="page container"><PageIntro kicker="SHIELDED LIQUIDITY" title="Liquidity" body="Provide liquidity and manage positions without clutter."/><div className="two-col"><div className="shadow-card app-card"><h2>Add Liquidity</h2><TokenBox label="Token A" token="sUSDC" amount="0.0"/><TokenBox label="Token B" token="sETH" amount="0.0"/><div className="detail-row"><span>Pool fee</span><strong>0.30%</strong></div><WalletButton /></div><div className="shadow-card app-card"><h2>Your Positions</h2><div className="empty-state"><Droplets size={34}/><h3>No positions yet</h3><p>Your active LP positions will appear here.</p></div></div></div></section>}
-function PortfolioPage(){return <section className="page container"><PageIntro kicker="PRIVATE OVERVIEW" title="Portfolio" body="A minimal view of balances, positions, and activity."/><div className="portfolio-grid"><div className="shadow-card app-card"><div className="card-top"><h2>Balances</h2><button className="ghost-button"><EyeOff size={16}/> Hidden</button></div>{['sUSDC','sETH','LP Token'].map(x=><div className="asset-row" key={x}><div><span className="coin"></span><strong>{x}</strong></div><span>••••••</span></div>)}</div><div className="shadow-card app-card"><h2>Positions</h2><div className="empty-state"><WalletCards size={34}/><h3>Nothing to show</h3><p>Connect your wallet to view private positions.</p><WalletButton /></div></div></div></section>}
+function SwapPage(){return <section className="page container"><PageIntro kicker="SHIELDED EXCHANGE" title="Swap" body="Approve and execute encrypted swaps directly against the deployed ShadowPool."/><SwapPanel/></section>}
+function LiquidityPage(){return <section className="page container"><PageIntro kicker="SHIELDED LIQUIDITY" title="Liquidity" body="Approve assets, add liquidity, or withdraw LP shares from the live testnet pool."/><LiquidityPanel/></section>}
+function PortfolioPage(){return <section className="page container"><PageIntro kicker="PRIVATE OVERVIEW" title="Portfolio" body="A minimal view of balances, positions, and activity."/><div className="portfolio-grid"><div className="shadow-card app-card"><div className="card-top"><h2>Balances</h2><button className="ghost-button"><EyeOff size={16}/> Hidden</button></div>{['sUSD','sETH','LP Share'].map(x=><div className="asset-row" key={x}><div><span className="coin"></span><strong>{x}</strong></div><span>••••••</span></div>)}</div><div className="shadow-card app-card"><h2>Positions</h2><div className="empty-state"><WalletCards size={34}/><h3>Private position data</h3><p>Signed reads will be wired here after the write-flow UI is verified.</p><WalletButton /></div></div></div></section>}
 function NotFound(){return <section className="page container"><PageIntro kicker="404" title="Lost in the shadow." body="That page does not exist."/><Link className="primary-btn" to="/">Back home</Link></section>}
 
 export default function App(){return <Layout><Routes><Route path="/" element={<Home/>}/><Route path="/swap" element={<SwapPage/>}/><Route path="/liquidity" element={<LiquidityPage/>}/><Route path="/portfolio" element={<PortfolioPage/>}/><Route path="*" element={<NotFound/>}/></Routes></Layout>}
