@@ -2,6 +2,7 @@ import { LockKeyhole, ShieldCheck, WalletCards, ArrowRightLeft, Droplets, EyeOff
 import { Link, NavLink, Route, Routes } from 'react-router-dom'
 import WalletButton from './WalletButton'
 import { LiquidityPanel, SwapPanel } from './DexPages'
+import FaucetPage from './FaucetPage'
 
 const seismicDocs = 'https://docs.seismic.systems/'
 const githubUrl = 'https://github.com/benjoz76/shadow-dex'
@@ -17,6 +18,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       <nav>
         <NavLink to="/swap">Swap</NavLink>
         <NavLink to="/liquidity">Liquidity</NavLink>
+        <NavLink to="/faucet">Faucet</NavLink>
         <NavLink to="/portfolio">Portfolio</NavLink>
         <a href={seismicDocs} target="_blank" rel="noreferrer">Docs</a>
       </nav>
@@ -85,4 +87,4 @@ function LiquidityPage(){return <section className="page container"><PageIntro k
 function PortfolioPage(){return <section className="page container"><PageIntro kicker="PRIVATE OVERVIEW" title="Portfolio" body="A minimal view of balances, positions, and activity."/><div className="portfolio-grid"><div className="shadow-card app-card"><div className="card-top"><h2>Balances</h2><button className="ghost-button"><EyeOff size={16}/> Hidden</button></div>{['sUSD','sETH','LP Share'].map(x=><div className="asset-row" key={x}><div><span className="coin"></span><strong>{x}</strong></div><span>••••••</span></div>)}</div><div className="shadow-card app-card"><h2>Positions</h2><div className="empty-state"><WalletCards size={34}/><h3>Private position data</h3><p>Signed reads will be wired here after the write-flow UI is verified.</p><WalletButton /></div></div></div></section>}
 function NotFound(){return <section className="page container"><PageIntro kicker="404" title="Lost in the shadow." body="That page does not exist."/><Link className="primary-btn" to="/">Back home</Link></section>}
 
-export default function App(){return <Layout><Routes><Route path="/" element={<Home/>}/><Route path="/swap" element={<SwapPage/>}/><Route path="/liquidity" element={<LiquidityPage/>}/><Route path="/portfolio" element={<PortfolioPage/>}/><Route path="*" element={<NotFound/>}/></Routes></Layout>}
+export default function App(){return <Layout><Routes><Route path="/" element={<Home/>}/><Route path="/swap" element={<SwapPage/>}/><Route path="/liquidity" element={<LiquidityPage/>}/><Route path="/faucet" element={<FaucetPage/>}/><Route path="/portfolio" element={<PortfolioPage/>}/><Route path="*" element={<NotFound/>}/></Routes></Layout>}
