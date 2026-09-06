@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ArrowRightLeft, CheckCircle2, Droplets, ShieldCheck } from 'lucide-react'
 import { parseUnits } from 'viem'
 import { useAccount, usePublicClient } from 'wagmi'
-import { useShieldedWallet, useShieldedWriteContract } from 'seismic-react'
+import { useShieldedWallet } from 'seismic-react'
+import { shieldedWriteContract } from 'seismic-viem'
 import WalletButton from './WalletButton'
 
 const TOKEN0 = (import.meta.env.VITE_TOKEN0_ADDRESS || '0xe744F18e430084009918BFE307A384FCB7b165c1') as `0x${string}`
@@ -10,6 +11,7 @@ const TOKEN1 = (import.meta.env.VITE_TOKEN1_ADDRESS || '0xa9a612D444Bcf1F5c02Ff4
 const POOL = (import.meta.env.VITE_SHADOW_POOL_ADDRESS || '0xbbb7588c320e71C3f47a67B6ced3eE67DBCa1D68') as `0x${string}`
 const EXPLORER = 'https://seismic-testnet.socialscan.io/tx/'
 const GAS = 1_500_000n
+const BLOCKS_WINDOW = 1_000n
 
 const tokenAbi = [{
   type: 'function', name: 'approve', stateMutability: 'nonpayable',
@@ -24,6 +26,34 @@ const poolAbi = [
 ] as const
 
 type TxState = { message: string; hash?: `0x${string}`; error?: string }
+type ShieldedWriteConfig = { address: `0x${string}`; abi: readonly unknown[]; functionName: string; args?: readonly unknown[]; gas?: bigint; gasPrice?: bigint }
+
+function useShadowShieldedWrite(config: ShieldedWriteConfig) {
+  const { walletClient } = useShieldedWallet()
+  const [error, setError] = useState<Error | null>(null)
+
+  const writeContract = useCallback(async () => {
+    setError(null)
+    if (!walletClient) {
+      const err = new Error('Shielded wallet client not initialized')
+      setError(err)
+      throw err
+    }
+    try {
+      return await shieldedWriteContract(
+        walletClient as any,
+        config as any,
+        { blocksWindow: BLOCKS_WINDOW },
+      )
+    } catch (err) {
+      const normalized = err instanceof Error ? err : new Error('Error executing shielded write')
+      setError(normalized)
+      throw normalized
+    }
+  }, [walletClient, config.address, config.abi, config.functionName, config.args, config.gas, config.gasPrice])
+
+  return { writeContract, error }
+}
 
 function toRaw(value: string) {
   if (!value.trim()) throw new Error('Enter an amount')
@@ -74,8 +104,10 @@ export function SwapPanel() {
   const outputSymbol = direction === '0to1' ? 'sETH' : 'sUSD'
   const shieldedReady = loaded && !!walletClient && !shieldedError
 
-  const approve = useShieldedWriteContract({ address: inputToken, abi: tokenAbi, functionName: 'approve', args: [POOL, raw], gas: GAS })
-  const swap = useShieldedWriteContract({ address: POOL, abi: poolAbi, functionName: 'swap', args: direction === '0to1' ? [raw, 0n] : [0n, raw], gas: GAS })
+  const approveArgs = useMemo(() => [POOL, raw] as const, [raw])
+  const swapArgs = useMemo(() => direction === '0to1' ? [raw, 0n] as const : [0n, raw] as const, [direction, raw])
+  const approve = useShadowShieldedWrite({ address: inputToken, abi: tokenAbi, functionName: 'approve', args: approveArgs, gas: GAS })
+  const swap = useShadowShieldedWrite({ address: POOL, abi: poolAbi, functionName: 'swap', args: swapArgs, gas: GAS })
 
   async function handleSwap() {
     try {
@@ -125,10 +157,14 @@ export function LiquidityPanel() {
   const rawShares = useMemo(() => { try { return toRaw(shares) } catch { return 0n } }, [shares])
   const shieldedReady = loaded && !!walletClient && !shieldedError
 
-  const approve0 = useShieldedWriteContract({ address: TOKEN0, abi: tokenAbi, functionName: 'approve', args: [POOL, raw0], gas: GAS })
-  const approve1 = useShieldedWriteContract({ address: TOKEN1, abi: tokenAbi, functionName: 'approve', args: [POOL, raw1], gas: GAS })
-  const add = useShieldedWriteContract({ address: POOL, abi: poolAbi, functionName: 'addLiquidity', args: [raw0, raw1], gas: GAS })
-  const remove = useShieldedWriteContract({ address: POOL, abi: poolAbi, functionName: 'removeLiquidity', args: [rawShares], gas: GAS })
+  const approve0Args = useMemo(() => [POOL, raw0] as const, [raw0])
+  const approve1Args = useMemo(() => [POOL, raw1] as const, [raw1])
+  const addArgs = useMemo(() => [raw0, raw1] as const, [raw0, raw1])
+  const removeArgs = useMemo(() => [rawShares] as const, [rawShares])
+  const approve0 = useShadowShieldedWrite({ address: TOKEN0, abi: tokenAbi, functionName: 'approve', args: approve0Args, gas: GAS })
+  const approve1 = useShadowShieldedWrite({ address: TOKEN1, abi: tokenAbi, functionName: 'approve', args: approve1Args, gas: GAS })
+  const add = useShadowShieldedWrite({ address: POOL, abi: poolAbi, functionName: 'addLiquidity', args: addArgs, gas: GAS })
+  const remove = useShadowShieldedWrite({ address: POOL, abi: poolAbi, functionName: 'removeLiquidity', args: removeArgs, gas: GAS })
 
   async function handleAdd() {
     try {
