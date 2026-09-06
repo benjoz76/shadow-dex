@@ -1,0 +1,43 @@
+name: Contracts CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'contracts/**'
+      - 'script/**'
+      - 'foundry.toml'
+      - '.github/workflows/contracts-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'contracts/**'
+      - 'script/**'
+      - 'foundry.toml'
+      - '.github/workflows/contracts-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Seismic Foundry
+        shell: bash
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/SeismicSystems/seismic-foundry/seismic/foundryup/install | bash
+          SEISMIC_BIN="${XDG_CONFIG_HOME:-$HOME}/.seismic/bin"
+          "$SEISMIC_BIN/sfoundryup" --install nightly
+          echo "$SEISMIC_BIN" >> "$GITHUB_PATH"
+
+      - name: Show tool versions
+        run: |
+          sforge --version
+          ssolc --version
+
+      - name: Compile contracts
+        env:
+          SEISMIC_RPC_URL: https://gcp-1.seismictest.net/rpc
+        run: sforge build
