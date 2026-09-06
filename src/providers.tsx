@@ -12,6 +12,7 @@ const rpcUrl = String(import.meta.env.VITE_RPC_URL || defaultRpcUrl).trim()
 
 export const shadowChain = {
   ...seismicTestnet,
+  nativeCurrency: { decimals: 18, name: 'Seismic', symbol: 'SIZW' },
   // Seismic currently targets 500 ms blocks. Supplying this prevents viem
   // from retaining latest-block reads for its generic 4 second default.
   blockTime: 500,
