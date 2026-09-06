@@ -113,7 +113,7 @@ export default function FaucetPage() {
       {!faucetConfigured && <div className="tx-feedback tx-error">Faucet contract address is not configured yet.</div>}
       {!isConnected ? <WalletButton/> : <button className="primary-btn wide faucet-claim" disabled={claimDisabled} onClick={handleClaim}><Gift size={18}/>{running ? 'Claiming…' : remaining > 0 ? 'Claim unavailable' : 'Claim sUSD + sETH'}</button>}
       {state && <div className={`tx-feedback ${state.error ? 'tx-error' : ''}`}><div>{state.error ? state.error : <><CheckCircle2 size={15}/> {state.message}</>}</div>{state.hash && <a href={`https://seismic-testnet.socialscan.io/tx/${state.hash}`} target="_blank" rel="noreferrer">View transaction ↗</a>}</div>}
-      <a className="gas-faucet-link" href={GAS_FAUCET} target="_blank" rel="noreferrer">Need native ETH for gas? Open Seismic Faucet <ExternalLink size={15}/></a>
+      <a className="gas-faucet-link" href={GAS_FAUCET} target="_blank" rel="noreferrer">Need SIZW for gas? Open Seismic Faucet <ExternalLink size={15}/></a>
     </div>
   </section>
 }
