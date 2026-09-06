@@ -6,7 +6,8 @@ import WalletButton from './WalletButton'
 import { shadowChain } from './providers'
 import './FaucetPage.css'
 
-const faucetAddressValue = String(import.meta.env.VITE_FAUCET_ADDRESS || '').trim()
+const defaultFaucetAddress = '0xc5E8524cF438328a1d3c15c995cE0De154B50202'
+const faucetAddressValue = String(import.meta.env.VITE_FAUCET_ADDRESS || defaultFaucetAddress).trim()
 const faucetConfigured = isAddress(faucetAddressValue) && faucetAddressValue !== zeroAddress
 const FAUCET = faucetAddressValue as `0x${string}`
 const GAS_FAUCET = 'https://community-faucet.seismictest.net/'
