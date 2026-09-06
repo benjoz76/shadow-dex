@@ -7,11 +7,14 @@ import { seismicTestnet } from 'seismic-react/rainbowkit'
 import { http as viemHttp } from 'viem'
 import { WagmiProvider, createConfig, http as wagmiHttp, injected } from 'wagmi'
 
-const defaultRpcUrl = 'https://testnet-1.seismictest.net/rpc'
+const defaultRpcUrl = 'https://gcp-2.seismictest.net/rpc'
 const rpcUrl = String(import.meta.env.VITE_RPC_URL || defaultRpcUrl).trim()
 
 export const shadowChain = {
   ...seismicTestnet,
+  // Seismic currently targets 500 ms blocks. Supplying this prevents viem
+  // from retaining latest-block reads for its generic 4 second default.
+  blockTime: 500,
   rpcUrls: {
     ...seismicTestnet.rpcUrls,
     default: { ...seismicTestnet.rpcUrls.default, http: [rpcUrl] },
