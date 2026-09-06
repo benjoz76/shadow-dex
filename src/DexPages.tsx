@@ -1,9 +1,8 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ArrowRightLeft, CheckCircle2, Droplets, ShieldCheck } from 'lucide-react'
 import { parseUnits } from 'viem'
 import { useAccount, usePublicClient } from 'wagmi'
-import { useShieldedWallet } from 'seismic-react'
-import { shieldedWriteContract } from 'seismic-viem'
+import { useShieldedContract, useShieldedWallet } from 'seismic-react'
 import WalletButton from './WalletButton'
 
 const TOKEN0 = (import.meta.env.VITE_TOKEN0_ADDRESS || '0xe744F18e430084009918BFE307A384FCB7b165c1') as `0x${string}`
@@ -11,49 +10,20 @@ const TOKEN1 = (import.meta.env.VITE_TOKEN1_ADDRESS || '0xa9a612D444Bcf1F5c02Ff4
 const POOL = (import.meta.env.VITE_SHADOW_POOL_ADDRESS || '0xbbb7588c320e71C3f47a67B6ced3eE67DBCa1D68') as `0x${string}`
 const EXPLORER = 'https://seismic-testnet.socialscan.io/tx/'
 const GAS = 1_500_000n
-const BLOCKS_WINDOW = 1_000n
 
 const tokenAbi = [{
   type: 'function', name: 'approve', stateMutability: 'nonpayable',
-  inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }],
+  inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'suint256' }],
   outputs: [{ name: '', type: 'bool' }],
 }] as const
 
 const poolAbi = [
-  { type: 'function', name: 'swap', stateMutability: 'nonpayable', inputs: [{ name: 'token0In', type: 'uint256' }, { name: 'token1In', type: 'uint256' }], outputs: [] },
-  { type: 'function', name: 'addLiquidity', stateMutability: 'nonpayable', inputs: [{ name: 'amount0', type: 'uint256' }, { name: 'amount1', type: 'uint256' }], outputs: [] },
-  { type: 'function', name: 'removeLiquidity', stateMutability: 'nonpayable', inputs: [{ name: 'shares', type: 'uint256' }], outputs: [] },
+  { type: 'function', name: 'swap', stateMutability: 'nonpayable', inputs: [{ name: 'token0In', type: 'suint256' }, { name: 'token1In', type: 'suint256' }], outputs: [] },
+  { type: 'function', name: 'addLiquidity', stateMutability: 'nonpayable', inputs: [{ name: 'amount0', type: 'suint256' }, { name: 'amount1', type: 'suint256' }], outputs: [] },
+  { type: 'function', name: 'removeLiquidity', stateMutability: 'nonpayable', inputs: [{ name: 'shares', type: 'suint256' }], outputs: [] },
 ] as const
 
 type TxState = { message: string; hash?: `0x${string}`; error?: string }
-type ShieldedWriteConfig = { address: `0x${string}`; abi: readonly unknown[]; functionName: string; args?: readonly unknown[]; gas?: bigint; gasPrice?: bigint }
-
-function useShadowShieldedWrite(config: ShieldedWriteConfig) {
-  const { walletClient } = useShieldedWallet()
-  const [error, setError] = useState<Error | null>(null)
-
-  const writeContract = useCallback(async () => {
-    setError(null)
-    if (!walletClient) {
-      const err = new Error('Shielded wallet client not initialized')
-      setError(err)
-      throw err
-    }
-    try {
-      return await shieldedWriteContract(
-        walletClient as any,
-        config as any,
-        { blocksWindow: BLOCKS_WINDOW },
-      )
-    } catch (err) {
-      const normalized = err instanceof Error ? err : new Error('Error executing shielded write')
-      setError(normalized)
-      throw normalized
-    }
-  }, [walletClient, config.address, config.abi, config.functionName, config.args, config.gas, config.gasPrice])
-
-  return { writeContract, error }
-}
 
 function toRaw(value: string) {
   if (!value.trim()) throw new Error('Enter an amount')
@@ -104,26 +74,29 @@ export function SwapPanel() {
   const outputSymbol = direction === '0to1' ? 'sETH' : 'sUSD'
   const shieldedReady = loaded && !!walletClient && !shieldedError
 
-  const approveArgs = useMemo(() => [POOL, raw] as const, [raw])
-  const swapArgs = useMemo(() => direction === '0to1' ? [raw, 0n] as const : [0n, raw] as const, [direction, raw])
-  const approve = useShadowShieldedWrite({ address: inputToken, abi: tokenAbi, functionName: 'approve', args: approveArgs, gas: GAS })
-  const swap = useShadowShieldedWrite({ address: POOL, abi: poolAbi, functionName: 'swap', args: swapArgs, gas: GAS })
+  const { contract: inputContract, error: inputContractError } = useShieldedContract({ address: inputToken, abi: tokenAbi })
+  const { contract: poolContract, error: poolContractError } = useShieldedContract({ address: POOL, abi: poolAbi })
 
   async function handleSwap() {
     try {
       if (!isConnected) throw new Error('Connect your wallet first')
       if (!shieldedReady) throw new Error(shieldedError || 'Shielded wallet is still initializing')
+      if (!inputContract) throw new Error(inputContractError?.message || 'Token contract client is not ready')
+      if (!poolContract) throw new Error(poolContractError?.message || 'Pool contract client is not ready')
+
       const value = toRaw(amount)
       if (value !== raw) throw new Error('Amount changed; try again')
       setRunning(true)
+
       setState({ message: `Approving ${inputSymbol}…` })
-      const approveHash = await approve.writeContract()
-      if (!approveHash) throw new Error(approve.error?.message || 'Approval was not submitted')
+      const approveHash = await inputContract.write.approve([POOL, raw], { gas: GAS })
       await ensureSuccess(publicClient, approveHash)
+
       setState({ message: 'Submitting shielded swap…' })
-      const swapHash = await swap.writeContract()
-      if (!swapHash) throw new Error(swap.error?.message || 'Swap was not submitted')
+      const swapArgs = direction === '0to1' ? [raw, 0n] as const : [0n, raw] as const
+      const swapHash = await poolContract.write.swap(swapArgs, { gas: GAS })
       await ensureSuccess(publicClient, swapHash)
+
       setState({ message: `${inputSymbol} → ${outputSymbol} swap confirmed`, hash: swapHash })
     } catch (err) {
       setState({ message: '', error: err instanceof Error ? err.message : 'Swap failed' })
@@ -137,7 +110,7 @@ export function SwapPanel() {
     <div className="token-box output-box"><div><span className="muted tiny">To</span><strong>Private quote</strong></div><span className="token-pill static-pill"><span className="coin"></span>{outputSymbol}</span></div>
     <div className="detail-row"><span>Pool fee</span><strong>0% (MVP)</strong></div>
     <div className="detail-row"><span>Route</span><strong>Direct ShadowPool</strong></div>
-    {!isConnected ? <WalletButton/> : <button className="primary-btn wide" disabled={running || raw === 0n || !shieldedReady} onClick={handleSwap}>{running ? 'Encrypting & confirming…' : !shieldedReady ? 'Initializing Shielded Wallet…' : `Approve & Swap ${inputSymbol}`}</button>}
+    {!isConnected ? <WalletButton/> : <button className="primary-btn wide" disabled={running || raw === 0n || !shieldedReady || !inputContract || !poolContract} onClick={handleSwap}>{running ? 'Encrypting & confirming…' : !shieldedReady ? 'Initializing Shielded Wallet…' : `Approve & Swap ${inputSymbol}`}</button>}
     {isConnected && <ShieldedStatus loaded={loaded} error={shieldedError}/>}<TxFeedback state={state}/>
   </div>
 }
@@ -157,28 +130,29 @@ export function LiquidityPanel() {
   const rawShares = useMemo(() => { try { return toRaw(shares) } catch { return 0n } }, [shares])
   const shieldedReady = loaded && !!walletClient && !shieldedError
 
-  const approve0Args = useMemo(() => [POOL, raw0] as const, [raw0])
-  const approve1Args = useMemo(() => [POOL, raw1] as const, [raw1])
-  const addArgs = useMemo(() => [raw0, raw1] as const, [raw0, raw1])
-  const removeArgs = useMemo(() => [rawShares] as const, [rawShares])
-  const approve0 = useShadowShieldedWrite({ address: TOKEN0, abi: tokenAbi, functionName: 'approve', args: approve0Args, gas: GAS })
-  const approve1 = useShadowShieldedWrite({ address: TOKEN1, abi: tokenAbi, functionName: 'approve', args: approve1Args, gas: GAS })
-  const add = useShadowShieldedWrite({ address: POOL, abi: poolAbi, functionName: 'addLiquidity', args: addArgs, gas: GAS })
-  const remove = useShadowShieldedWrite({ address: POOL, abi: poolAbi, functionName: 'removeLiquidity', args: removeArgs, gas: GAS })
+  const { contract: token0Contract, error: token0ContractError } = useShieldedContract({ address: TOKEN0, abi: tokenAbi })
+  const { contract: token1Contract, error: token1ContractError } = useShieldedContract({ address: TOKEN1, abi: tokenAbi })
+  const { contract: poolContract, error: poolContractError } = useShieldedContract({ address: POOL, abi: poolAbi })
 
   async function handleAdd() {
     try {
       if (!isConnected) throw new Error('Connect your wallet first')
       if (!shieldedReady) throw new Error(shieldedError || 'Shielded wallet is still initializing')
+      if (!token0Contract) throw new Error(token0ContractError?.message || 'sUSD contract client is not ready')
+      if (!token1Contract) throw new Error(token1ContractError?.message || 'sETH contract client is not ready')
+      if (!poolContract) throw new Error(poolContractError?.message || 'Pool contract client is not ready')
       toRaw(amount0); toRaw(amount1); setRunning(true)
+
       setState({ message: 'Approving sUSD…' })
-      const h0 = await approve0.writeContract(); if (!h0) throw new Error(approve0.error?.message || 'sUSD approval was not submitted')
+      const h0 = await token0Contract.write.approve([POOL, raw0], { gas: GAS })
       await ensureSuccess(publicClient, h0)
+
       setState({ message: 'Approving sETH…' })
-      const h1 = await approve1.writeContract(); if (!h1) throw new Error(approve1.error?.message || 'sETH approval was not submitted')
+      const h1 = await token1Contract.write.approve([POOL, raw1], { gas: GAS })
       await ensureSuccess(publicClient, h1)
+
       setState({ message: 'Adding shielded liquidity…' })
-      const hp = await add.writeContract(); if (!hp) throw new Error(add.error?.message || 'Add-liquidity transaction was not submitted')
+      const hp = await poolContract.write.addLiquidity([raw0, raw1], { gas: GAS })
       await ensureSuccess(publicClient, hp)
       setState({ message: 'Liquidity added successfully', hash: hp })
     } catch (err) { setState({ message: '', error: err instanceof Error ? err.message : 'Add liquidity failed' }) }
@@ -189,8 +163,9 @@ export function LiquidityPanel() {
     try {
       if (!isConnected) throw new Error('Connect your wallet first')
       if (!shieldedReady) throw new Error(shieldedError || 'Shielded wallet is still initializing')
+      if (!poolContract) throw new Error(poolContractError?.message || 'Pool contract client is not ready')
       toRaw(shares); setRunning(true); setState({ message: 'Removing shielded liquidity…' })
-      const hash = await remove.writeContract(); if (!hash) throw new Error(remove.error?.message || 'Remove-liquidity transaction was not submitted')
+      const hash = await poolContract.write.removeLiquidity([rawShares], { gas: GAS })
       await ensureSuccess(publicClient, hash)
       setState({ message: 'Liquidity removed successfully', hash })
     } catch (err) { setState({ message: '', error: err instanceof Error ? err.message : 'Remove liquidity failed' }) }
@@ -198,7 +173,7 @@ export function LiquidityPanel() {
   }
 
   return <div className="two-col">
-    <div className="shadow-card app-card"><h2>Add Liquidity</h2><AmountBox label="Token A" token="sUSD" value={amount0} onChange={setAmount0}/><AmountBox label="Token B" token="sETH" value={amount1} onChange={setAmount1}/><div className="detail-row"><span>Pool fee</span><strong>0% (MVP)</strong></div>{!isConnected ? <WalletButton/> : <button className="primary-btn wide" disabled={running || raw0 === 0n || raw1 === 0n || !shieldedReady} onClick={handleAdd}>{running ? 'Processing…' : !shieldedReady ? 'Initializing Shielded Wallet…' : 'Approve & Add Liquidity'}</button>}{isConnected && <ShieldedStatus loaded={loaded} error={shieldedError}/>}<TxFeedback state={state}/></div>
-    <div className="shadow-card app-card"><h2>Remove Liquidity</h2><p className="muted form-copy">Enter the LP share amount to withdraw. Your share balance remains shielded.</p><AmountBox label="LP shares" token="LP" value={shares} onChange={setShares}/><div className="detail-row"><span>Withdrawal</span><strong>Both pool assets</strong></div>{!isConnected ? <WalletButton/> : <button className="secondary-action wide" disabled={running || rawShares === 0n || !shieldedReady} onClick={handleRemove}><Droplets size={17}/>{running ? 'Processing…' : !shieldedReady ? 'Initializing…' : 'Remove Liquidity'}</button>}<TxFeedback state={state}/></div>
+    <div className="shadow-card app-card"><h2>Add Liquidity</h2><AmountBox label="Token A" token="sUSD" value={amount0} onChange={setAmount0}/><AmountBox label="Token B" token="sETH" value={amount1} onChange={setAmount1}/><div className="detail-row"><span>Pool fee</span><strong>0% (MVP)</strong></div>{!isConnected ? <WalletButton/> : <button className="primary-btn wide" disabled={running || raw0 === 0n || raw1 === 0n || !shieldedReady || !token0Contract || !token1Contract || !poolContract} onClick={handleAdd}>{running ? 'Processing…' : !shieldedReady ? 'Initializing Shielded Wallet…' : 'Approve & Add Liquidity'}</button>}{isConnected && <ShieldedStatus loaded={loaded} error={shieldedError}/>}<TxFeedback state={state}/></div>
+    <div className="shadow-card app-card"><h2>Remove Liquidity</h2><p className="muted form-copy">Enter the LP share amount to withdraw. Your share balance remains shielded.</p><AmountBox label="LP shares" token="LP" value={shares} onChange={setShares}/><div className="detail-row"><span>Withdrawal</span><strong>Both pool assets</strong></div>{!isConnected ? <WalletButton/> : <button className="secondary-action wide" disabled={running || rawShares === 0n || !shieldedReady || !poolContract} onClick={handleRemove}><Droplets size={17}/>{running ? 'Processing…' : !shieldedReady ? 'Initializing…' : 'Remove Liquidity'}</button>}<TxFeedback state={state}/></div>
   </div>
 }
