@@ -2,6 +2,8 @@
 
 Shadow-Dex is an experimental privacy-first AMM built for the Seismic testnet.
 
+This project exists solely as a contribution to the Seismic testnet ecosystem and as a hands-on learning environment for shielded smart contracts, private transactions, and signed reads. It is built and maintained by a solo builder with AI-assisted development.
+
 **Live app:** https://shadow-dex-zeta.vercel.app/
 
 ## Features
@@ -32,7 +34,9 @@ The frontend uses `https://testnet-2.seismictest.net/rpc` by default. Optional o
 
 ## Disclaimer
 
-Shadow-Dex is a testnet-only learning project. It has not been audited and must not be used with real funds.
+Shadow-Dex is a testnet-only contribution and learning project. It has not been audited and must not be used with real funds.
+
+When Seismic transitions to mainnet, this testnet application will be discontinued and this repository will remain archived as a record of the contribution. Shadow-Dex is not intended to operate as a mainnet financial product.
 
 ## License
 
