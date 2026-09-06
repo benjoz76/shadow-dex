@@ -1,0 +1,53 @@
+.balance-value,
+.position-value {
+  color: #f7f8fb;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.balance-mask {
+  color: #727f94;
+  letter-spacing: .12em;
+}
+
+.portfolio-connect {
+  margin-top: 18px;
+}
+
+.portfolio-connect .wallet-btn {
+  width: 100%;
+}
+
+.portfolio-refresh {
+  margin: 16px auto 0;
+  border: 0;
+  background: transparent;
+  color: #8f9bb0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.portfolio-refresh:hover {
+  color: #fff;
+}
+
+.ghost-button:focus-visible,
+.portfolio-refresh:focus-visible {
+  outline: 2px solid #8b8eff;
+  outline-offset: 3px;
+}
+
+.spin {
+  animation: portfolio-spin .9s linear infinite;
+}
+
+@keyframes portfolio-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin { animation: none; }
+}
