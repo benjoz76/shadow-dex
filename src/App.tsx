@@ -1,5 +1,6 @@
-import { Github, LockKeyhole, ShieldCheck, WalletCards, ArrowRightLeft, Droplets, EyeOff, ExternalLink } from 'lucide-react'
+import { Github, LockKeyhole, ShieldCheck, WalletCards, ArrowRightLeft, Droplets, EyeOff } from 'lucide-react'
 import { Link, NavLink, Route, Routes } from 'react-router-dom'
+import WalletButton from './WalletButton'
 
 const seismicDocs = 'https://docs.seismic.systems/'
 const githubUrl = 'https://github.com/benjoz76/shadow-dex'
@@ -16,7 +17,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       </nav>
       <div className="nav-actions">
         <a className="icon-btn" href={githubUrl} target="_blank" rel="noreferrer" aria-label="GitHub"><Github size={19}/></a>
-        <button className="wallet-btn">Connect Wallet</button>
+        <WalletButton />
       </div>
     </header>
     <main>{children}</main>
@@ -75,11 +76,11 @@ function Feature({icon,title,body}:{icon:React.ReactNode,title:string,body:strin
 
 function PageIntro({kicker,title,body}:{kicker:string,title:string,body:string}) {return <div className="page-intro"><div className="eyebrow">{kicker}</div><h1>{title}</h1><p>{body}</p></div>}
 
-function SwapPage(){return <section className="page container"><PageIntro kicker="SHIELDED EXCHANGE" title="Swap" body="A focused private-swap workspace for Shadow-Dex."/><div className="center-card shadow-card app-card"><div className="card-top"><h2>Private Swap</h2><span className="status"><ShieldCheck size={15}/> Shielded</span></div><TokenBox label="From" token="sUSDC" amount="0.0"/><div className="swap-glyph"><ArrowRightLeft/></div><TokenBox label="To" token="sETH" amount="0.0"/><div className="detail-row"><span>Slippage tolerance</span><strong>0.5%</strong></div><div className="detail-row"><span>Route</span><strong>Direct pool</strong></div><button className="primary-btn wide">Connect Wallet to Swap</button></div></section>}
+function SwapPage(){return <section className="page container"><PageIntro kicker="SHIELDED EXCHANGE" title="Swap" body="A focused private-swap workspace for Shadow-Dex."/><div className="center-card shadow-card app-card"><div className="card-top"><h2>Private Swap</h2><span className="status"><ShieldCheck size={15}/> Shielded</span></div><TokenBox label="From" token="sUSDC" amount="0.0"/><div className="swap-glyph"><ArrowRightLeft/></div><TokenBox label="To" token="sETH" amount="0.0"/><div className="detail-row"><span>Slippage tolerance</span><strong>0.5%</strong></div><div className="detail-row"><span>Route</span><strong>Direct pool</strong></div><WalletButton /></div></section>}
 
-function LiquidityPage(){return <section className="page container"><PageIntro kicker="SHIELDED LIQUIDITY" title="Liquidity" body="Provide liquidity and manage positions without clutter."/><div className="two-col"><div className="shadow-card app-card"><h2>Add Liquidity</h2><TokenBox label="Token A" token="sUSDC" amount="0.0"/><TokenBox label="Token B" token="sETH" amount="0.0"/><div className="detail-row"><span>Pool fee</span><strong>0.30%</strong></div><button className="primary-btn wide">Connect Wallet</button></div><div className="shadow-card app-card"><h2>Your Positions</h2><div className="empty-state"><Droplets size={34}/><h3>No positions yet</h3><p>Your active LP positions will appear here.</p></div></div></div></section>}
+function LiquidityPage(){return <section className="page container"><PageIntro kicker="SHIELDED LIQUIDITY" title="Liquidity" body="Provide liquidity and manage positions without clutter."/><div className="two-col"><div className="shadow-card app-card"><h2>Add Liquidity</h2><TokenBox label="Token A" token="sUSDC" amount="0.0"/><TokenBox label="Token B" token="sETH" amount="0.0"/><div className="detail-row"><span>Pool fee</span><strong>0.30%</strong></div><WalletButton /></div><div className="shadow-card app-card"><h2>Your Positions</h2><div className="empty-state"><Droplets size={34}/><h3>No positions yet</h3><p>Your active LP positions will appear here.</p></div></div></div></section>}
 
-function PortfolioPage(){return <section className="page container"><PageIntro kicker="PRIVATE OVERVIEW" title="Portfolio" body="A minimal view of balances, positions, and activity."/><div className="portfolio-grid"><div className="shadow-card app-card"><div className="card-top"><h2>Balances</h2><button className="ghost-button"><EyeOff size={16}/> Hidden</button></div>{['sUSDC','sETH','LP Token'].map(x=><div className="asset-row" key={x}><div><span className="coin"></span><strong>{x}</strong></div><span>••••••</span></div>)}</div><div className="shadow-card app-card"><h2>Positions</h2><div className="empty-state"><WalletCards size={34}/><h3>Nothing to show</h3><p>Connect your wallet to view private positions.</p></div></div></div></section>}
+function PortfolioPage(){return <section className="page container"><PageIntro kicker="PRIVATE OVERVIEW" title="Portfolio" body="A minimal view of balances, positions, and activity."/><div className="portfolio-grid"><div className="shadow-card app-card"><div className="card-top"><h2>Balances</h2><button className="ghost-button"><EyeOff size={16}/> Hidden</button></div>{['sUSDC','sETH','LP Token'].map(x=><div className="asset-row" key={x}><div><span className="coin"></span><strong>{x}</strong></div><span>••••••</span></div>)}</div><div className="shadow-card app-card"><h2>Positions</h2><div className="empty-state"><WalletCards size={34}/><h3>Nothing to show</h3><p>Connect your wallet to view private positions.</p><WalletButton /></div></div></div></section>}
 
 function NotFound(){return <section className="page container"><PageIntro kicker="404" title="Lost in the shadow." body="That page does not exist."/><Link className="primary-btn" to="/">Back home</Link></section>}
 
