@@ -47,6 +47,7 @@ Examples:
 
 bootstrap runs:
   approve token0 -> approve token1 -> addLiquidity
+and stops immediately if any transaction reverts.
 EOF
 }
 
@@ -57,11 +58,23 @@ send_seismic() {
 
   echo
   echo "==> $sig"
-  scast send "$to" "$sig" "$@" \
+
+  local receipt
+  receipt=$(scast send "$to" "$sig" "$@" \
     --private-key "$PRIVATE_KEY" \
     --rpc-url "$SEISMIC_RPC_URL" \
     --seismic \
-    --gas-limit "$TX_GAS_LIMIT"
+    --gas-limit "$TX_GAS_LIMIT" \
+    --json)
+
+  echo "$receipt"
+
+  # scast can return exit code 0 even when the mined transaction reverted,
+  # so explicitly inspect receipt.status before continuing a multi-step flow.
+  if ! printf '%s' "$receipt" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"0x1"'; then
+    echo "ERROR: $sig reverted (receipt status != 0x1). Stopping flow." >&2
+    return 1
+  fi
 }
 
 approve_token() {
@@ -112,7 +125,6 @@ swap() {
 
   case "$direction" in
     0to1)
-      # token0 input, token1 input = 0 to preserve the two-input calldata shape.
       send_seismic "$SHADOW_POOL_ADDRESS" \
         "swap(suint256,suint256)" \
         "$amount" "0"
