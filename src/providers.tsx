@@ -5,7 +5,8 @@ import { seismicTestnet } from 'seismic-react/rainbowkit'
 import { http as viemHttp } from 'viem'
 import { WagmiProvider, createConfig, http as wagmiHttp, injected } from 'wagmi'
 
-const rpcUrl = String(import.meta.env.VITE_RPC_URL ?? seismicTestnet.rpcUrls.default.http[0]).trim()
+const defaultRpcUrl = 'https://testnet-1.seismictest.net/rpc'
+const rpcUrl = String(import.meta.env.VITE_RPC_URL || defaultRpcUrl).trim()
 
 export const shadowChain = {
   ...seismicTestnet,
