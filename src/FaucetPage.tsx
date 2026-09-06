@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Clock3, ExternalLink, Gift, ShieldCheck } from 'lucide-react'
 import { formatUnits, isAddress, zeroAddress } from 'viem'
-import { useAccount, usePublicClient, useReadContract, useWriteContract } from 'wagmi'
+import { useShieldedWallet, useShieldedWriteContract } from 'seismic-react'
+import { useAccount, usePublicClient, useReadContract } from 'wagmi'
 import WalletButton from './WalletButton'
 import { shadowChain } from './providers'
 import './FaucetPage.css'
@@ -38,7 +39,13 @@ function formatTokenAmount(value: bigint | undefined) {
 export default function FaucetPage() {
   const { address, isConnected } = useAccount()
   const publicClient = usePublicClient()
-  const { writeContractAsync } = useWriteContract()
+  const { loaded: shieldedLoaded, error: shieldedError } = useShieldedWallet()
+  const { writeContract: writeClaim } = useShieldedWriteContract({
+    address: FAUCET,
+    abi: faucetAbi,
+    functionName: 'claim',
+    gas: 1_500_000n,
+  })
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000))
   const [running, setRunning] = useState(false)
   const [state, setState] = useState<FaucetState | null>(null)
@@ -70,15 +77,12 @@ export default function FaucetPage() {
       if (!faucetConfigured) throw new Error('ShadowFaucet has not been deployed yet')
       if (remaining > 0) throw new Error(`Next claim available in ${formatCountdown(remaining)}`)
       if (!publicClient) throw new Error('Public client is not ready')
+      if (!shieldedLoaded) throw new Error(shieldedError || 'Shielded wallet is still initializing')
 
       setRunning(true)
-      setState({ message: 'Confirm the faucet transaction in your wallet…' })
-      const hash = await writeContractAsync({
-        address: FAUCET,
-        abi: faucetAbi,
-        functionName: 'claim',
-        chainId: shadowChain.id,
-      })
+      setState({ message: 'Sign the Seismic faucet transaction in your wallet…' })
+      const hash = await writeClaim()
+      if (!hash) throw new Error('Wallet did not return a transaction hash')
 
       setState({ message: 'Claim submitted — waiting for confirmation…', hash })
       const receipt = await publicClient.waitForTransactionReceipt({ hash })
@@ -95,7 +99,7 @@ export default function FaucetPage() {
     }
   }
 
-  const claimDisabled = running || remaining > 0 || !faucetConfigured
+  const claimDisabled = running || remaining > 0 || !faucetConfigured || !shieldedLoaded
 
   return <section className="page container">
     <div className="page-intro">
@@ -111,7 +115,8 @@ export default function FaucetPage() {
       </div>
       <div className="faucet-window"><span><Clock3 size={16}/> Claim window</span><strong className={remaining > 0 ? '' : 'ready-text'}>{formatCountdown(remaining)}</strong></div>
       {!faucetConfigured && <div className="tx-feedback tx-error">Faucet contract address is not configured yet.</div>}
-      {!isConnected ? <WalletButton/> : <button className="primary-btn wide faucet-claim" disabled={claimDisabled} onClick={handleClaim}><Gift size={18}/>{running ? 'Claiming…' : remaining > 0 ? 'Claim unavailable' : 'Claim sUSD + sETH'}</button>}
+      {isConnected && shieldedError && <div className="tx-feedback tx-error">Shielded wallet: {shieldedError}</div>}
+      {!isConnected ? <WalletButton/> : <button className="primary-btn wide faucet-claim" disabled={claimDisabled} onClick={handleClaim}><Gift size={18}/>{running ? 'Claiming…' : !shieldedLoaded ? 'Initializing…' : remaining > 0 ? 'Claim unavailable' : 'Claim sUSD + sETH'}</button>}
       {state && <div className={`tx-feedback ${state.error ? 'tx-error' : ''}`}><div>{state.error ? state.error : <><CheckCircle2 size={15}/> {state.message}</>}</div>{state.hash && <a href={`https://seismic-testnet.socialscan.io/tx/${state.hash}`} target="_blank" rel="noreferrer">View transaction ↗</a>}</div>}
       <a className="gas-faucet-link" href={GAS_FAUCET} target="_blank" rel="noreferrer">Need SIZE for gas? Open Seismic Faucet <ExternalLink size={15}/></a>
     </div>
