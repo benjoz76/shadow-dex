@@ -1,0 +1,115 @@
+.faucet-card {
+  padding: 32px;
+}
+
+.faucet-assets {
+  display: grid;
+  gap: 12px;
+}
+
+.faucet-asset {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid #263248;
+  background: #0c1321;
+  border-radius: 14px;
+}
+
+.faucet-asset > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.faucet-asset small {
+  color: var(--muted);
+}
+
+.faucet-asset > b {
+  font-size: 22px;
+}
+
+.faucet-coin {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(95, 224, 168, .09);
+  border: 1px solid rgba(95, 224, 168, .3);
+  color: var(--green);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.faucet-coin.alt {
+  background: rgba(111, 114, 255, .1);
+  border-color: rgba(111, 114, 255, .32);
+  color: #aeb0ff;
+}
+
+.faucet-window {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 18px 0;
+  color: #8f9bae;
+  font-size: 13px;
+}
+
+.faucet-window span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.faucet-window strong {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .08em;
+  color: #fff;
+}
+
+.faucet-window .ready-text {
+  color: var(--green);
+}
+
+.faucet-claim {
+  min-height: 52px;
+}
+
+.gas-faucet-link {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #9ba6b8;
+  font-size: 13px;
+}
+
+.gas-faucet-link:hover {
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  .faucet-card {
+    padding: 20px;
+  }
+
+  .faucet-asset {
+    grid-template-columns: 42px 1fr auto;
+    padding: 14px;
+  }
+
+  .faucet-coin {
+    width: 42px;
+    height: 42px;
+  }
+
+  .faucet-asset > b {
+    font-size: 18px;
+  }
+}
