@@ -1,5 +1,7 @@
 import type { PropsWithChildren } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
+import '@rainbow-me/rainbowkit/styles.css'
 import { ShieldedWalletProvider } from 'seismic-react'
 import { seismicTestnet } from 'seismic-react/rainbowkit'
 import { http as viemHttp } from 'viem'
@@ -32,12 +34,14 @@ export function AppProviders({ children }: PropsWithChildren) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <ShieldedWalletProvider
-          config={wagmiConfig}
-          options={{ publicTransport, publicChain: shadowChain }}
-        >
-          {children}
-        </ShieldedWalletProvider>
+        <RainbowKitProvider>
+          <ShieldedWalletProvider
+            config={wagmiConfig}
+            options={{ publicTransport, publicChain: shadowChain }}
+          >
+            {children}
+          </ShieldedWalletProvider>
+        </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   )
