@@ -1,7 +1,7 @@
 {
   "name": "shadow-dex",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,12 +9,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.55.3",
     "@vitejs/plugin-react": "latest",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
     "react-router-dom": "latest",
-    "vite": "latest"
+    "seismic-react": "1.1.1",
+    "seismic-viem": "1.1.1",
+    "viem": "^2.40.2",
+    "vite": "latest",
+    "wagmi": "^2.19.5"
   },
   "devDependencies": {
     "@types/react": "latest",
