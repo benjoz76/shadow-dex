@@ -16,8 +16,8 @@ set -euo pipefail
 : "${SEISMIC_RPC_URL:?SEISMIC_RPC_URL is required}"
 
 TOKEN0_ADDRESS="${TOKEN0_ADDRESS:-0xe744F18e430084009918BFE307A384FCB7b165c1}"
-TOKEN1_ADDRESS="${TOKEN1_ADDRESS:-0x05e16300b3392b2e61C20Ca3ff34E358523A2B00}"
-SHADOW_POOL_ADDRESS="${SHADOW_POOL_ADDRESS:-0x4ce3ab8A4a64Cff6Aa0b4D364f985EDeE1BE08b6}"
+TOKEN1_ADDRESS="${TOKEN1_ADDRESS:-0xa9a612D444Bcf1F5c02Ff4dC65e86ADa31a1CE5f}"
+SHADOW_POOL_ADDRESS="${SHADOW_POOL_ADDRESS:-0xbbb7588c320e71C3f47a67B6ced3eE67DBCa1D68}"
 TX_GAS_LIMIT="${TX_GAS_LIMIT:-1500000}"
 
 command -v scast >/dev/null 2>&1 || {
@@ -69,8 +69,6 @@ send_seismic() {
 
   echo "$receipt"
 
-  # scast can return exit code 0 even when the mined transaction reverted,
-  # so explicitly inspect receipt.status before continuing a multi-step flow.
   if ! printf '%s' "$receipt" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"0x1"'; then
     echo "ERROR: $sig reverted (receipt status != 0x1). Stopping flow." >&2
     return 1
@@ -90,12 +88,8 @@ approve() {
   [[ -n "$which" && -n "$amount" ]] || { usage; exit 1; }
 
   case "$which" in
-    token0)
-      approve_token "$TOKEN0_ADDRESS" "$amount"
-      ;;
-    token1)
-      approve_token "$TOKEN1_ADDRESS" "$amount"
-      ;;
+    token0) approve_token "$TOKEN0_ADDRESS" "$amount" ;;
+    token1) approve_token "$TOKEN1_ADDRESS" "$amount" ;;
     both)
       approve_token "$TOKEN0_ADDRESS" "$amount"
       approve_token "$TOKEN1_ADDRESS" "$amount"
@@ -170,24 +164,12 @@ cmd="${1:-}"
 shift || true
 
 case "$cmd" in
-  approve)
-    approve "$@"
-    ;;
-  add-liquidity)
-    add_liquidity "$@"
-    ;;
-  swap)
-    swap "$@"
-    ;;
-  remove-liquidity)
-    remove_liquidity "$@"
-    ;;
-  bootstrap)
-    bootstrap "$@"
-    ;;
-  -h|--help|help|"")
-    usage
-    ;;
+  approve) approve "$@" ;;
+  add-liquidity) add_liquidity "$@" ;;
+  swap) swap "$@" ;;
+  remove-liquidity) remove_liquidity "$@" ;;
+  bootstrap) bootstrap "$@" ;;
+  -h|--help|help|"") usage ;;
   *)
     echo "Unknown command: $cmd" >&2
     usage
