@@ -25,6 +25,55 @@ const poolAbi = [
 
 type TxState = { message: string; hash?: `0x${string}`; error?: string }
 
+function errorDetails(error: unknown) {
+  const details: string[] = []
+  let current: unknown = error
+
+  for (let depth = 0; depth < 6 && current; depth += 1) {
+    if (typeof current === 'string') {
+      details.push(current)
+      break
+    }
+
+    if (typeof current !== 'object') break
+    const value = current as Record<string, unknown>
+    for (const key of ['message', 'shortMessage', 'details']) {
+      if (typeof value[key] === 'string') details.push(value[key])
+    }
+    current = value.cause
+  }
+
+  return details.join('\n')
+}
+
+function isExpiredSeismicBlockHash(error: unknown) {
+  const details = errorDetails(error).toLowerCase()
+  return details.includes('recent_block_hash') && details.includes('last 100 blocks')
+}
+
+function displayTxError(error: unknown, fallback: string) {
+  if (isExpiredSeismicBlockHash(error)) {
+    return 'The Seismic block window expired before confirmation. Please try again and confirm the wallet request promptly.'
+  }
+  return error instanceof Error ? error.message : fallback
+}
+
+async function writeWithFreshBlockRetry(
+  write: () => Promise<`0x${string}`>,
+  onRetry: () => void,
+): Promise<`0x${string}`> {
+  try {
+    return await write()
+  } catch (error) {
+    if (!isExpiredSeismicBlockHash(error)) throw error
+
+    // The node explicitly rejected the first transaction, so it is safe to
+    // build and sign it once more with fresh Seismic replay-protection data.
+    onRetry()
+    return write()
+  }
+}
+
 function toRaw(value: string) {
   if (!value.trim()) throw new Error('Enter an amount')
   const amount = parseUnits(value, 18)
@@ -89,17 +138,23 @@ export function SwapPanel() {
       setRunning(true)
 
       setState({ message: `Approving ${inputSymbol}…` })
-      const approveHash = await inputContract.write.approve([POOL, raw], { gas: GAS })
+      const approveHash = await writeWithFreshBlockRetry(
+        () => inputContract.write.approve([POOL, raw], { gas: GAS }),
+        () => setState({ message: 'Approval expired — rebuilding with a fresh Seismic block…' }),
+      )
       await ensureSuccess(publicClient, approveHash)
 
       setState({ message: 'Submitting shielded swap…' })
       const swapArgs = direction === '0to1' ? [raw, 0n] as const : [0n, raw] as const
-      const swapHash = await poolContract.write.swap(swapArgs, { gas: GAS })
+      const swapHash = await writeWithFreshBlockRetry(
+        () => poolContract.write.swap(swapArgs, { gas: GAS }),
+        () => setState({ message: 'Swap expired — rebuilding with a fresh Seismic block…' }),
+      )
       await ensureSuccess(publicClient, swapHash)
 
       setState({ message: `${inputSymbol} → ${outputSymbol} swap confirmed`, hash: swapHash })
     } catch (err) {
-      setState({ message: '', error: err instanceof Error ? err.message : 'Swap failed' })
+      setState({ message: '', error: displayTxError(err, 'Swap failed') })
     } finally { setRunning(false) }
   }
 
@@ -144,18 +199,27 @@ export function LiquidityPanel() {
       toRaw(amount0); toRaw(amount1); setRunning(true)
 
       setState({ message: 'Approving sUSD…' })
-      const h0 = await token0Contract.write.approve([POOL, raw0], { gas: GAS })
+      const h0 = await writeWithFreshBlockRetry(
+        () => token0Contract.write.approve([POOL, raw0], { gas: GAS }),
+        () => setState({ message: 'sUSD approval expired — rebuilding with a fresh Seismic block…' }),
+      )
       await ensureSuccess(publicClient, h0)
 
       setState({ message: 'Approving sETH…' })
-      const h1 = await token1Contract.write.approve([POOL, raw1], { gas: GAS })
+      const h1 = await writeWithFreshBlockRetry(
+        () => token1Contract.write.approve([POOL, raw1], { gas: GAS }),
+        () => setState({ message: 'sETH approval expired — rebuilding with a fresh Seismic block…' }),
+      )
       await ensureSuccess(publicClient, h1)
 
       setState({ message: 'Adding shielded liquidity…' })
-      const hp = await poolContract.write.addLiquidity([raw0, raw1], { gas: GAS })
+      const hp = await writeWithFreshBlockRetry(
+        () => poolContract.write.addLiquidity([raw0, raw1], { gas: GAS }),
+        () => setState({ message: 'Liquidity transaction expired — rebuilding with a fresh Seismic block…' }),
+      )
       await ensureSuccess(publicClient, hp)
       setState({ message: 'Liquidity added successfully', hash: hp })
-    } catch (err) { setState({ message: '', error: err instanceof Error ? err.message : 'Add liquidity failed' }) }
+    } catch (err) { setState({ message: '', error: displayTxError(err, 'Add liquidity failed') }) }
     finally { setRunning(false) }
   }
 
@@ -165,10 +229,13 @@ export function LiquidityPanel() {
       if (!shieldedReady) throw new Error(shieldedError || 'Shielded wallet is still initializing')
       if (!poolContract) throw new Error(poolContractError?.message || 'Pool contract client is not ready')
       toRaw(shares); setRunning(true); setState({ message: 'Removing shielded liquidity…' })
-      const hash = await poolContract.write.removeLiquidity([rawShares], { gas: GAS })
+      const hash = await writeWithFreshBlockRetry(
+        () => poolContract.write.removeLiquidity([rawShares], { gas: GAS }),
+        () => setState({ message: 'Withdrawal expired — rebuilding with a fresh Seismic block…' }),
+      )
       await ensureSuccess(publicClient, hash)
       setState({ message: 'Liquidity removed successfully', hash })
-    } catch (err) { setState({ message: '', error: err instanceof Error ? err.message : 'Remove liquidity failed' }) }
+    } catch (err) { setState({ message: '', error: displayTxError(err, 'Remove liquidity failed') }) }
     finally { setRunning(false) }
   }
 
